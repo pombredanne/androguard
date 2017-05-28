@@ -17,6 +17,9 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with Androguard.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
+from builtins import chr
+from builtins import object
 import sys
 sys.path.append('./')
 
@@ -28,6 +31,7 @@ from androguard.decompiler.dad.instruction import (Constant,
 
 
 class DemoEmulator(object):
+
     def __init__(self, graph):
         self.graph = graph
         self.loop = []
@@ -64,7 +68,7 @@ class DemoEmulator(object):
             if cnd:
                 cond.true.visit(self)
             elif has_else:
-                    cond.false.visit(self)
+                cond.false.visit(self)
             self.visit(follow)
 
     def visit_statement_node(self, stmt):
@@ -154,9 +158,9 @@ dvmethod.process()  # build IR Form / control flow...
 graph = dvmethod.graph
 visitor = DemoEmulator(graph)
 
-l = [94, 42, 93, 88, 3, 2, 95, 2, 13, 85, 11, 2, 19, 1, 125, 19, 0, 102,
-     30, 24, 19, 99, 76, 21, 102, 22, 26, 111, 39, 125, 2, 44, 80, 10, 90,
-     5, 119, 100, 119, 60, 4, 87, 79, 42, 52]
+l = [94, 42, 93, 88, 3, 2, 95, 2, 13, 85, 11, 2, 19, 1, 125, 19, 0, 102, 30, 24,
+     19, 99, 76, 21, 102, 22, 26, 111, 39, 125, 2, 44, 80, 10, 90, 5, 119, 100,
+     119, 60, 4, 87, 79, 42, 52]
 visitor.init(dvmethod.lparams[0], l)
 
 KEYVALUE = '6^)(9-p35a%3#4S!4S0)$Yt%^&5(j.g^&o(*0)$Yv!#O@6GpG@=+3j.&6^)(0-=1'
@@ -167,13 +171,14 @@ visitor.init('keylen', len(KEYVALUE))
 
 method.show()
 
+
 def show_mem(visitor):
-    print 'Memory[4]: %s' % visitor.mem[4]
-    print '==> %r' % ''.join(chr(i) for i in visitor.mem[4])
+    print('Memory[4]: %s' % visitor.mem[4])
+    print('==> %r' % ''.join(chr(i) for i in visitor.mem[4]))
+
 
 show_mem(visitor)
-print '\nStarting visit...',
+print('\nStarting visit...', end=' ')
 graph.get_entry().visit(visitor)
-print ' done !\n'
+print(' done !\n')
 show_mem(visitor)
-

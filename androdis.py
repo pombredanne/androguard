@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with Androguard.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 import sys
 import os
 from optparse import OptionParser
@@ -26,9 +27,17 @@ from androguard.core import androconf
 from androguard.core.bytecodes import dvm
 from androguard.core.bytecodes.apk import *
 
-option_0 = { 'name' : ('-i', '--input'), 'help' : 'file : use this filename (DEX/ODEX)', 'nargs' : 1 }
-option_1 = { 'name' : ('-o', '--offset'), 'help' : 'offset to disassemble', 'nargs' : 1 }
-option_2 = { 'name' : ('-s', '--size'), 'help' : 'size', 'nargs' : 1 }
+option_0 = {
+    'name': ('-i', '--input'),
+    'help': 'file : use this filename (DEX/ODEX)',
+    'nargs': 1
+}
+option_1 = {
+    'name': ('-o', '--offset'),
+    'help': 'offset to disassemble',
+    'nargs': 1
+}
+option_2 = {'name': ('-s', '--size'), 'help': 'size', 'nargs': 1}
 
 options = [option_0, option_1, option_2]
 
@@ -39,9 +48,9 @@ def disassemble(dex, offset, size):
         nb = 0
         idx = offset
         for i in d.disassemble(offset, size):
-            print "%-8d(%08x)" % (nb, idx),
+            print("%-8d(%08x)" % (nb, idx), end=' ')
             i.show(idx)
-            print
+            print()
 
             idx += i.get_length()
             nb += 1

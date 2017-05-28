@@ -1,3 +1,4 @@
+from __future__ import print_function
 # This file is part of Androguard.
 #
 # Copyright (c) 2012 Geoffroy Gueguen <geoffroy.gueguen@gmail.com>
@@ -15,6 +16,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from builtins import next
+from builtins import input
+from builtins import map
+from builtins import str
+from builtins import range
+from builtins import object
 import sys
 sys.path.append('./')
 
@@ -25,15 +32,14 @@ import androguard.core.androconf as androconf
 import androguard.decompiler.dad.util as util
 from androguard.core.analysis import analysis
 from androguard.core.bytecodes import apk, dvm
-from androguard.decompiler.dad.ast import (JSONWriter, parse_descriptor,
-    literal_string, literal_null, literal_int, literal_long, literal_float,
-    literal_double, literal_bool, dummy)
+from androguard.decompiler.dad.ast import (
+    JSONWriter, parse_descriptor, literal_string, literal_null, literal_int,
+    literal_long, literal_float, literal_double, literal_bool, literal_hex_int,
+    dummy)
 from androguard.decompiler.dad.control_flow import identify_structures
-from androguard.decompiler.dad.dataflow import (build_def_use,
-                                                place_declarations,
-                                                dead_code_elimination,
-                                                register_propagation,
-                                                split_variables)
+from androguard.decompiler.dad.dataflow import (
+    build_def_use, place_declarations, dead_code_elimination,
+    register_propagation, split_variables)
 from androguard.decompiler.dad.graph import construct, simplify, split_if_nodes
 from androguard.decompiler.dad.instruction import Param, ThisParam
 from androguard.decompiler.dad.writer import Writer
@@ -46,39 +52,26 @@ def auto_vm(filename):
         return dvm.DalvikVMFormat(apk.APK(filename).get_dex())
     elif ret == 'DEX':
         return dvm.DalvikVMFormat(read(filename))
-    elif ret == 'ODEX':
+    elif ret == 'DEY':
         return dvm.DalvikOdexVMFormat(read(filename))
     return None
 
+
 # No seperate DvField class currently
 def get_field_ast(field):
-    triple = field.get_class_name()[1:-1], field.get_name(), field.get_descriptor()
+    triple = field.get_class_name()[1:-1], field.get_name(
+    ), field.get_descriptor()
 
     expr = None
     if field.init_value:
-        vt = field.init_value.get_value_type()
         val = field.init_value.value
+        expr = dummy(str(val))
 
-        # TODO: Add other types once dvm.EncodedValue parses them correctly
-        if vt == dvm.VALUE_STRING:
-            expr = literal_string(val)
-        # elif vt in (dvm.VALUE_INT, dvm.VALUE_SHORT, dvm.VALUE_CHAR):
-        #     expr = literal_int(val)
-        elif vt == dvm.VALUE_BYTE:
-            x = ord(val)
-            expr = literal_int(x - 256 if x >= 128 else x)
-        # elif vt == dvm.VALUE_LONG:
-        #     expr = literal_long(val)
-        # elif vt == dvm.VALUE_DOUBLE:
-        #     expr = literal_double(val)
-        # elif vt == dvm.VALUE_FLOAT:
-        #     expr = literal_float(val)
-        elif vt == dvm.VALUE_NULL:
-            expr = literal_null()
-        elif vt == dvm.VALUE_BOOLEAN:
-            expr = literal_bool(val)
-        else:
-            expr = dummy('???')
+        if val is not None:
+            if field.get_descriptor() == 'Ljava/lang/String;':
+                expr = literal_string(val)
+            elif field.proto == 'B':
+                expr = literal_hex_int(struct.unpack('<b', struct.pack("B", val))[0])
 
     return {
         'triple': triple,
@@ -87,7 +80,9 @@ def get_field_ast(field):
         'expr': expr,
     }
 
+
 class DvMethod(object):
+
     def __init__(self, methanalysis):
         method = methanalysis.get_method()
         self.method = method
@@ -135,8 +130,11 @@ class DvMethod(object):
         # Native methods... no blocks.
         if self.start_block is None:
             logger.debug('Native Method.')
-            self.writer = Writer(None, self)
-            self.writer.write_method()
+            if doAST:
+                self.ast = JSONWriter(None, self).get_ast()
+            else:
+                self.writer = Writer(None, self)
+                self.writer.write_method()
             return
 
         graph = construct(self.start_block, self.var_to_name, self.exceptions)
@@ -165,13 +163,13 @@ class DvMethod(object):
 
         if not __debug__:
             util.create_png(self.cls_name, self.name, graph,
-                                                    '/tmp/dad/pre-structured')
+                            '/tmp/dad/pre-structured')
 
         identify_structures(graph, graph.immediate_dominators())
 
         if not __debug__:
             util.create_png(self.cls_name, self.name, graph,
-                                                    '/tmp/dad/structured')
+                            '/tmp/dad/structured')
 
         if doAST:
             self.ast = JSONWriter(graph, self).get_ast()
@@ -183,11 +181,11 @@ class DvMethod(object):
         return self.ast
 
     def show_source(self):
-        print self.get_source()
+        print(self.get_source())
 
     def get_source(self):
         if self.writer:
-            return '%s' % self.writer
+            return str(self.writer)
         return ''
 
     def get_source_ext(self):
@@ -201,6 +199,7 @@ class DvMethod(object):
 
 
 class DvClass(object):
+
     def __init__(self, dvclass, vma):
         name = dvclass.get_name()
         if name.find('/') > 0:
@@ -213,7 +212,6 @@ class DvClass(object):
         self.vma = vma
         self.methods = dvclass.get_methods()
         self.fields = dvclass.get_fields()
-        self.subclasses = {}
         self.code = []
         self.inner = False
 
@@ -236,12 +234,9 @@ class DvClass(object):
         logger.info('Class : %s', self.name)
         logger.info('Methods added :')
         for meth in self.methods:
-            logger.info('%s (%s, %s)', meth.get_method_idx(), self.name, meth.name)
+            logger.info('%s (%s, %s)', meth.get_method_idx(), self.name,
+                        meth.name)
         logger.info('')
-
-    def add_subclass(self, innername, dvclass):
-        self.subclasses[innername] = dvclass
-        dvclass.inner = True
 
     def get_methods(self):
         return self.methods
@@ -249,22 +244,34 @@ class DvClass(object):
     def process_method(self, num, doAST=False):
         method = self.methods[num]
         if not isinstance(method, DvMethod):
-            method.set_instructions([i for i in method.get_instructions()])
+            # Do not change the instructions if it is already cached in the past
+            cached = True
+            if not method.is_cached_instructions():
+                method.set_instructions([i for i in method.get_instructions()])
+                cached = False
+
             self.methods[num] = DvMethod(self.vma.get_method(method))
             self.methods[num].process(doAST=doAST)
-            method.set_instructions([])
+
+            if not cached:
+                method.set_instructions([])
         else:
             method.process(doAST=doAST)
 
     def process(self, doAST=False):
-        for klass in self.subclasses.values():
-            klass.process(doAST=doAST)
         for i in range(len(self.methods)):
-            self.process_method(i, doAST=doAST)
+            try:
+                self.process_method(i, doAST=doAST)
+            except Exception as e:
+                logger.debug(
+                    'Error decompiling method %s: %s', self.methods[i], e)
 
     def get_ast(self):
         fields = [get_field_ast(f) for f in self.fields]
-        methods = [m.get_ast() for m in self.methods if m.ast is not None]
+        methods = []
+        for m in self.methods:
+          if isinstance(m, DvMethod) and m.ast:
+            methods.append(m.get_ast())
         isInterface = 'interface' in self.access
         return {
             'rawname': self.thisclass[1:-1],
@@ -272,7 +279,7 @@ class DvClass(object):
             'super': parse_descriptor(self.superclass),
             'flags': self.access,
             'isInterface': isInterface,
-            'interfaces': map(parse_descriptor, self.interfaces),
+            'interfaces': list(map(parse_descriptor, self.interfaces)),
             'fields': fields,
             'methods': methods,
         }
@@ -289,7 +296,7 @@ class DvClass(object):
 
         if len(self.interfaces) > 0:
             prototype += ' implements %s' % ', '.join(
-                        [n[1:-1].replace('/', '.') for n in self.interfaces])
+                [n[1:-1].replace('/', '.') for n in self.interfaces])
 
         source.append('%s {\n' % prototype)
         for field in self.fields:
@@ -300,22 +307,28 @@ class DvClass(object):
             if access:
                 source.append(' '.join(access))
                 source.append(' ')
-            if field.init_value:
-                value = field.init_value.value
+            init_value = field.get_init_value()
+            if init_value:
+                value = init_value.value
                 if f_type == 'String':
-                    value = '"%s"' % value
+                    if value:
+                        value = '"%s"' % value.encode("unicode-escape").decode("ascii")
+                    else:
+                        # FIXME we can not check if this value here is null or ""
+                        # In both cases we end up here...
+                        value = '""'
                 elif field.proto == 'B':
-                    value = '0x%x' % struct.unpack('b', value)[0]
+                    # byte value: convert from unsiged int to signed and print as hex
+                    # as bytes are signed in Java
+                    value = hex(struct.unpack("b", struct.pack("B", value))[0])
                 source.append('%s %s = %s;\n' % (f_type, name, value))
             else:
                 source.append('%s %s;\n' % (f_type, name))
 
-        for klass in self.subclasses.values():
-            source.append(klass.get_source())
-
         for method in self.methods:
             if isinstance(method, DvMethod):
                 source.append(method.get_source())
+
         source.append('}\n')
         return ''.join(source)
 
@@ -323,9 +336,9 @@ class DvClass(object):
         source = []
         if not self.inner and self.package:
             source.append(
-            ('PACKAGE', [('PACKAGE_START', 'package '),
-                         ('NAME_PACKAGE', '%s' % self.package),
-                         ('PACKAGE_END', ';\n')]))
+                ('PACKAGE', [('PACKAGE_START', 'package '), (
+                    'NAME_PACKAGE', '%s' % self.package), ('PACKAGE_END', ';\n')
+                        ]))
         list_proto = []
         list_proto.append(
             ('PROTOTYPE_ACCESS', '%s class ' % ' '.join(self.access)))
@@ -348,24 +361,44 @@ class DvClass(object):
 
         for field in self.fields:
             field_access_flags = field.get_access_flags()
-            access = [util.ACCESS_FLAGS_FIELDS[flag] for flag in
-                        util.ACCESS_FLAGS_FIELDS if flag & field_access_flags]
+            access = [util.ACCESS_FLAGS_FIELDS[flag]
+                      for flag in util.ACCESS_FLAGS_FIELDS
+                      if flag & field_access_flags]
             f_type = util.get_type(field.get_descriptor())
             name = field.get_name()
             if access:
                 access_str = '    %s ' % ' '.join(access)
             else:
                 access_str = '    '
-            source.append(
-                ('FIELD', [('FIELD_ACCESS', access_str),
-                           ('FIELD_TYPE', '%s' % f_type),
-                           ('SPACE', ' '),
-                           ('NAME_FIELD', '%s' % name, f_type, field),
-                           ('FIELD_END', ';\n')]))
 
-        #TODO: call get_source_ext for each subclass?
-        for klass in self.subclasses.values():
-            source.append((klass, klass.get_source()))
+            value = None
+            init_value = field.get_init_value()
+            if init_value:
+                value = init_value.value
+                if f_type == 'String':
+                    if value:
+                        value = ' = "%s"' % value.encode("unicode-escape").decode("ascii")
+                    else:
+                        # FIXME we can not check if this value here is null or ""
+                        # In both cases we end up here...
+                        value = ' = ""'
+                elif field.proto == 'B':
+                    # a byte
+                    value = ' = %s' % hex(struct.unpack("b", struct.pack("B", value))[0])
+                else:
+                    value = ' = %s' % str(value)
+            if value:
+                source.append(
+                    ('FIELD', [('FIELD_ACCESS', access_str), (
+                        'FIELD_TYPE', '%s' % f_type), ('SPACE', ' '), (
+                            'NAME_FIELD', '%s' % name, f_type, field), ('FIELD_VALUE', value), ('FIELD_END',
+                                                                        ';\n')]))
+            else:
+                source.append(
+                    ('FIELD', [('FIELD_ACCESS', access_str), (
+                        'FIELD_TYPE', '%s' % f_type), ('SPACE', ' '), (
+                            'NAME_FIELD', '%s' % name, f_type, field), ('FIELD_END',
+                                                                        ';\n')]))
 
         for method in self.methods:
             if isinstance(method, DvMethod):
@@ -374,29 +407,28 @@ class DvClass(object):
         return source
 
     def show_source(self):
-        print self.get_source()
+        print(self.get_source())
 
     def __repr__(self):
-        if not self.subclasses:
-            return 'Class(%s)' % self.name
-        return 'Class(%s) -- Subclasses(%s)' % (self.name, self.subclasses)
+        return 'Class(%s)' % self.name
 
 
 class DvMachine(object):
+
     def __init__(self, name):
         vm = auto_vm(name)
         if vm is None:
             raise ValueError('Format not recognised: %s' % name)
-        self.vma = analysis.uVMAnalysis(vm)
+        self.vma = analysis.Analysis(vm)
         self.classes = dict((dvclass.get_name(), dvclass)
                             for dvclass in vm.get_classes())
         #util.merge_inner(self.classes)
 
     def get_classes(self):
-        return self.classes.keys()
+        return list(self.classes.keys())
 
     def get_class(self, class_name):
-        for name, klass in self.classes.iteritems():
+        for name, klass in self.classes.items():
             if class_name in name:
                 if isinstance(klass, DvClass):
                     return klass
@@ -404,7 +436,7 @@ class DvMachine(object):
                 return dvclass
 
     def process(self):
-        for name, klass in self.classes.iteritems():
+        for name, klass in self.classes.items():
             logger.info('Processing class: %s', name)
             if isinstance(klass, DvClass):
                 klass.process()
@@ -417,7 +449,7 @@ class DvMachine(object):
             klass.show_source()
 
     def process_and_show(self):
-        for name, klass in sorted(self.classes.iteritems()):
+        for name, klass in sorted(self.classes.items()):
             logger.info('Processing class: %s', name)
             if not isinstance(klass, DvClass):
                 klass = DvClass(klass, self.vma)
@@ -449,7 +481,7 @@ def main():
         logger.info(' %s', class_name)
     logger.info('========================')
 
-    cls_name = raw_input('Choose a class: ')
+    cls_name = input('Choose a class: ')
     if cls_name == '*':
         machine.process_and_show()
     else:
@@ -461,7 +493,7 @@ def main():
             for i, method in enumerate(cls.get_methods()):
                 logger.info('%d: %s', i, method.name)
             logger.info('======================')
-            meth = raw_input('Method: ')
+            meth = input('Method: ')
             if meth == '*':
                 logger.info('CLASS = %s', cls)
                 cls.process()
@@ -470,6 +502,7 @@ def main():
             logger.info('Source:')
             logger.info('===========================')
             cls.show_source()
+
 
 if __name__ == '__main__':
     main()

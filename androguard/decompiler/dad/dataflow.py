@@ -15,18 +15,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from builtins import range
+from builtins import object
 import logging
 from collections import defaultdict
-from androguard.decompiler.dad.instruction import (Variable, ThisParam,
-                                                   Param)
+from androguard.decompiler.dad.instruction import (Variable, ThisParam, Param)
 from androguard.decompiler.dad.util import build_path, common_dom
 from androguard.decompiler.dad.node import Node
-
 
 logger = logging.getLogger('dad.control_flow')
 
 
 class BasicReachDef(object):
+
     def __init__(self, graph, params):
         self.g = graph
         self.A = defaultdict(set)
@@ -47,11 +48,11 @@ class BasicReachDef(object):
                 if kill is not None:
                     self.defs[node][kill].add(i)
                     self.def_to_loc[kill].add(i)
-            for defs, values in self.defs[node].iteritems():
+            for defs, values in self.defs[node].items():
                 self.DB[node].add(max(values))
 
     def run(self):
-        nodes = self.g.rpo[:]
+        nodes = self.g.rpo
         while nodes:
             node = nodes.pop(0)
             newR = set()
@@ -123,7 +124,7 @@ def dead_code_elimination(graph, du, ud):
     instructions.
     '''
     for node in graph.rpo:
-        for i, ins in node.get_loc_with_ins()[:]:
+        for i, ins in node.get_loc_with_ins():
             reg = ins.get_lhs()
             if reg is not None:
                 # If the definition is not used, we check that the instruction
@@ -148,13 +149,13 @@ def dead_code_elimination(graph, du, ud):
 
 
 def clear_path_node(graph, reg, loc1, loc2):
-    for loc in xrange(loc1, loc2):
+    for loc in range(loc1, loc2):
         ins = graph.get_ins_from_loc(loc)
         logger.debug('  treat loc: %d, ins: %s', loc, ins)
         if ins is None:
             continue
         logger.debug('  LHS: %s, side_effect: %s', ins.get_lhs(),
-                                                   ins.has_side_effect())
+                     ins.has_side_effect())
         if ins.get_lhs() == reg or ins.has_side_effect():
             return False
     return True
@@ -203,7 +204,7 @@ def register_propagation(graph, du, ud):
     while change:
         change = False
         for node in graph.rpo:
-            for i, ins in node.get_loc_with_ins()[:]:
+            for i, ins in node.get_loc_with_ins():
                 logger.debug('Treating instruction %d: %s', i, ins)
                 logger.debug('  Used vars: %s', ins.get_used_vars())
                 for var in ins.get_used_vars():
@@ -222,7 +223,7 @@ def register_propagation(graph, du, ud):
                     orig_ins = graph.get_ins_from_loc(loc)
                     logger.debug('     -> %s', orig_ins)
                     logger.debug('     -> DU(%s, %s) = %s', var, loc,
-                                                    du[var, loc])
+                                 du[var, loc])
 
                     # We defined some instructions as not propagable.
                     # Actually this is the case only for array creation
@@ -248,7 +249,7 @@ def register_propagation(graph, du, ud):
                         safe = True
                         orig_ins_used_vars = orig_ins.get_used_vars()
                         logger.debug('    variables used by the original '
-                                    'instruction: %s', orig_ins_used_vars)
+                                     'instruction: %s', orig_ins_used_vars)
                         for var2 in orig_ins_used_vars:
                             # loc is the location of the defined variable
                             # i is the location of the current instruction
@@ -293,7 +294,7 @@ def register_propagation(graph, du, ud):
                             continue
                         ud[var2, i].extend(old_ud)
                         logger.debug('\t  - ud(%s, %s) = %s', var2, i,
-                                                          ud[var2, i])
+                                     ud[var2, i])
                         ud.pop((var2, loc))
 
                         for def_loc in old_ud:
@@ -312,6 +313,7 @@ def register_propagation(graph, du, ud):
 
 
 class DummyNode(Node):
+
     def __init__(self, name):
         super(DummyNode, self).__init__(name)
 
@@ -362,7 +364,7 @@ def split_variables(graph, lvars, DU, UD):
         nb_vars = max(lvars) + 1
     else:
         nb_vars = 0
-    for var, versions in variables.iteritems():
+    for var, versions in variables.items():
         nversions = len(versions)
         if nversions == 1:
             continue
@@ -408,7 +410,7 @@ def reach_def_analysis(graph, lparams):
         graph.add_edge(old_exit, new_exit)
         graph.rpo.append(new_exit)
 
-    analysis = BasicReachDef(graph, set(lparams))
+    analysis = BasicReachDef(graph, lparams)
     analysis.run()
 
     # The analysis is done, We can now remove the two special nodes.
@@ -446,7 +448,7 @@ def build_def_use(graph, lparams):
                     UD[var, i].append(prior_def)
                 else:
                     intersect = analysis.def_to_loc[var].intersection(
-                                                            analysis.R[node])
+                        analysis.R[node])
                     UD[var, i].extend(intersect)
     DU = defaultdict(list)
     for var_loc, defs_loc in UD.items():
@@ -462,8 +464,8 @@ def place_declarations(graph, dvars, du, ud):
     for node in graph.post_order():
         for loc, ins in node.get_loc_with_ins():
             for var in ins.get_used_vars():
-                if (not isinstance(dvars[var], Variable)
-                    or isinstance(dvars[var], Param)):
+                if (not isinstance(dvars[var], Variable) or
+                    isinstance(dvars[var], Param)):
                     continue
                 var_defs_locs = ud[var, loc]
                 def_nodes = set()
@@ -478,7 +480,7 @@ def place_declarations(graph, dvars, du, ud):
                 common_dominator = def_nodes.pop()
                 for def_node in def_nodes:
                     common_dominator = common_dom(
-                                      idom, common_dominator, def_node)
+                        idom, common_dominator, def_node)
                 if any(var in range(*common_dominator.ins_range)
                        for var in ud[var, loc]):
                     continue

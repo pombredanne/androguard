@@ -1,3 +1,4 @@
+from __future__ import print_function
 # This file is part of Androguard.
 #
 # Copyright (C) 2013, Anthony Desnos <desnos at t0t0.fr>
@@ -15,6 +16,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from builtins import range
+from builtins import object
 from subprocess import Popen, PIPE, STDOUT
 
 import tempfile
@@ -33,12 +36,18 @@ try:
     from pygments.token import Token
 except ImportError:
     PYGMENTS = False
+
     class Filter(object):
         pass
 
 
 class Dex2Jar(object):
-    def __init__(self, vm, path_dex2jar="./decompiler/dex2jar/", bin_dex2jar="dex2jar.sh", tmp_dir="/tmp/"):
+
+    def __init__(self,
+                 vm,
+                 path_dex2jar="./decompiler/dex2jar/",
+                 bin_dex2jar="dex2jar.sh",
+                 tmp_dir="/tmp/"):
         pathtmp = tmp_dir
         if not os.path.exists(pathtmp):
             os.makedirs(pathtmp)
@@ -48,7 +57,9 @@ class Dex2Jar(object):
             fd.write(vm.get_buff())
             fd.flush()
 
-        compile = Popen([path_dex2jar + bin_dex2jar, fdname], stdout=PIPE, stderr=STDOUT)
+        compile = Popen([path_dex2jar + bin_dex2jar, fdname],
+                        stdout=PIPE,
+                        stderr=STDOUT)
         stdout, stderr = compile.communicate()
         os.unlink(fdname)
 
@@ -59,7 +70,14 @@ class Dex2Jar(object):
 
 
 class DecompilerDex2Jad(object):
-    def __init__(self, vm, path_dex2jar="./decompiler/dex2jar/", bin_dex2jar="dex2jar.sh", path_jad="./decompiler/jad/", bin_jad="jad", tmp_dir="/tmp/"):
+
+    def __init__(self,
+                 vm,
+                 path_dex2jar="./decompiler/dex2jar/",
+                 bin_dex2jar="dex2jar.sh",
+                 path_jad="./decompiler/jad/",
+                 bin_jad="jad",
+                 tmp_dir="/tmp/"):
         self.classes = {}
         self.classes_failed = []
 
@@ -72,12 +90,16 @@ class DecompilerDex2Jad(object):
             fd.write(vm.get_buff())
             fd.flush()
 
-        compile = Popen([path_dex2jar + bin_dex2jar, fdname], stdout=PIPE, stderr=STDOUT)
+        compile = Popen([path_dex2jar + bin_dex2jar, fdname],
+                        stdout=PIPE,
+                        stderr=STDOUT)
         stdout, stderr = compile.communicate()
         os.unlink(fdname)
 
         pathclasses = fdname + "dex2jar/"
-        compile = Popen(["unzip", fdname + "_dex2jar.jar", "-d", pathclasses], stdout=PIPE, stderr=STDOUT)
+        compile = Popen(["unzip", fdname + "_dex2jar.jar", "-d", pathclasses],
+                        stdout=PIPE,
+                        stderr=STDOUT)
         stdout, stderr = compile.communicate()
         os.unlink(fdname + "_dex2jar.jar")
 
@@ -89,7 +111,10 @@ class DecompilerDex2Jad(object):
                         real_filename += "/"
                     real_filename += f
 
-                    compile = Popen([path_jad + bin_jad, "-o", "-d", root, real_filename], stdout=PIPE, stderr=STDOUT)
+                    compile = Popen([path_jad + bin_jad, "-o", "-d", root,
+                                     real_filename],
+                                    stdout=PIPE,
+                                    stderr=STDOUT)
                     stdout, stderr = compile.communicate()
 
         for i in vm.get_classes():
@@ -118,7 +143,7 @@ class DecompilerDex2Jad(object):
         return self.classes[class_name]
 
     def display_source(self, method):
-        print self.get_source_method(method)
+        print(self.get_source_method(method))
 
     def get_source_class(self, _class):
         return self.classes[_class.get_name()]
@@ -135,11 +160,18 @@ class DecompilerDex2Jad(object):
         return self.classes[class_name]
 
     def display_all(self, _class):
-        print self.get_all(_class.get_name())
+        print(self.get_all(_class.get_name()))
 
 
 class DecompilerDex2WineJad(object):
-    def __init__(self, vm, path_dex2jar="./decompiler/dex2jar/", bin_dex2jar="dex2jar.sh", path_jad="./decompiler/jad/", bin_jad="jad", tmp_dir="/tmp/"):
+
+    def __init__(self,
+                 vm,
+                 path_dex2jar="./decompiler/dex2jar/",
+                 bin_dex2jar="dex2jar.sh",
+                 path_jad="./decompiler/jad/",
+                 bin_jad="jad",
+                 tmp_dir="/tmp/"):
         self.classes = {}
         self.classes_failed = []
 
@@ -152,12 +184,16 @@ class DecompilerDex2WineJad(object):
             fd.write(vm.get_buff())
             fd.flush()
 
-        compile = Popen([path_dex2jar + bin_dex2jar, fdname], stdout=PIPE, stderr=STDOUT)
+        compile = Popen([path_dex2jar + bin_dex2jar, fdname],
+                        stdout=PIPE,
+                        stderr=STDOUT)
         stdout, stderr = compile.communicate()
         os.unlink(fdname)
 
         pathclasses = fdname + "dex2jar/"
-        compile = Popen(["unzip", fdname + "_dex2jar.jar", "-d", pathclasses], stdout=PIPE, stderr=STDOUT)
+        compile = Popen(["unzip", fdname + "_dex2jar.jar", "-d", pathclasses],
+                        stdout=PIPE,
+                        stderr=STDOUT)
         stdout, stderr = compile.communicate()
         os.unlink(fdname + "_dex2jar.jar")
 
@@ -169,7 +205,10 @@ class DecompilerDex2WineJad(object):
                         real_filename += "/"
                     real_filename += f
 
-                    compile = Popen(["wine", path_jad + bin_jad, "-o", "-d", root, real_filename], stdout=PIPE, stderr=STDOUT)
+                    compile = Popen(["wine", path_jad + bin_jad, "-o", "-d",
+                                     root, real_filename],
+                                    stdout=PIPE,
+                                    stderr=STDOUT)
                     stdout, stderr = compile.communicate()
 
         for i in vm.get_classes():
@@ -198,7 +237,7 @@ class DecompilerDex2WineJad(object):
         return self.classes[class_name]
 
     def display_source(self, method):
-        print self.get_source_method(method)
+        print(self.get_source_method(method))
 
     def get_source_class(self, _class):
         return self.classes[_class.get_name()]
@@ -215,29 +254,37 @@ class DecompilerDex2WineJad(object):
         return self.classes[class_name]
 
     def display_all(self, _class):
-        print self.get_all(_class.get_name())
+        print(self.get_all(_class.get_name()))
+
 
 class DecompilerDed(object):
-    def __init__(self, vm, path="./decompiler/ded/", bin_ded="ded.sh", tmp_dir="/tmp/"):
+
+    def __init__(self,
+                 vm,
+                 path="./decompiler/ded/",
+                 bin_ded="ded.sh",
+                 tmp_dir="/tmp/"):
         self.classes = {}
         self.classes_failed = []
 
         pathtmp = tmp_dir
         if not os.path.exists(pathtmp):
-            os.makedirs( pathtmp )
+            os.makedirs(pathtmp)
 
-        fd, fdname = tempfile.mkstemp( dir=pathtmp )
+        fd, fdname = tempfile.mkstemp(dir=pathtmp)
         with os.fdopen(fd, "w+b") as fd:
-            fd.write( vm.get_buff() )
+            fd.write(vm.get_buff())
             fd.flush()
 
         dirname = tempfile.mkdtemp(prefix=fdname + "-src")
-        compile = Popen([ path + bin_ded, "-c", "-o", "-d", dirname, fdname ], stdout=PIPE, stderr=STDOUT)
+        compile = Popen([path + bin_ded, "-c", "-o", "-d", dirname, fdname],
+                        stdout=PIPE,
+                        stderr=STDOUT)
         stdout, stderr = compile.communicate()
-        os.unlink( fdname )
+        os.unlink(fdname)
 
         findsrc = None
-        for root, dirs, files in os.walk( dirname + "/optimized-decompiled/" ):
+        for root, dirs, files in os.walk(dirname + "/optimized-decompiled/"):
             if dirs != []:
                 for f in dirs:
                     if f == "src":
@@ -253,11 +300,11 @@ class DecompilerDed(object):
             fname = findsrc + "/" + i.get_name()[1:-1] + ".java"
             #print fname
             if os.path.isfile(fname) == True:
-                self.classes[ i.get_name() ] = read(fname, binary=False)
+                self.classes[i.get_name()] = read(fname, binary=False)
             else:
-                self.classes_failed.append( i.get_name() )
+                self.classes_failed.append(i.get_name())
 
-        rrmdir( dirname )
+        rrmdir(dirname)
 
     def get_source_method(self, method):
         class_name = method.get_class_name()
@@ -273,7 +320,7 @@ class DecompilerDed(object):
         return result
 
     def display_source(self, method):
-        print self.get_source_method(method)
+        print(self.get_source_method(method))
 
     def get_all(self, class_name):
         if class_name not in self.classes:
@@ -288,17 +335,19 @@ class DecompilerDed(object):
         return self.classes[_class.get_name()]
 
     def display_all(self, _class):
-        print self.get_all(_class.get_name())
+        print(self.get_all(_class.get_name()))
 
 
 class DecompilerDex2Fernflower(object):
+
     def __init__(self,
                  vm,
                  path_dex2jar="./decompiler/dex2jar/",
                  bin_dex2jar="dex2jar.sh",
                  path_fernflower="./decompiler/fernflower/",
                  bin_fernflower="fernflower.jar",
-                 options_fernflower={"dgs": '1', "asc": '1'},
+                 options_fernflower={"dgs": '1',
+                                     "asc": '1'},
                  tmp_dir="/tmp/"):
         self.classes = {}
         self.classes_failed = []
@@ -312,12 +361,16 @@ class DecompilerDex2Fernflower(object):
             fd.write(vm.get_buff())
             fd.flush()
 
-        compile = Popen([path_dex2jar + bin_dex2jar, fdname], stdout=PIPE, stderr=STDOUT)
+        compile = Popen([path_dex2jar + bin_dex2jar, fdname],
+                        stdout=PIPE,
+                        stderr=STDOUT)
         stdout, stderr = compile.communicate()
         os.unlink(fdname)
 
         pathclasses = fdname + "dex2jar/"
-        compile = Popen(["unzip", fdname + "_dex2jar.jar", "-d", pathclasses], stdout=PIPE, stderr=STDOUT)
+        compile = Popen(["unzip", fdname + "_dex2jar.jar", "-d", pathclasses],
+                        stdout=PIPE,
+                        stderr=STDOUT)
         stdout, stderr = compile.communicate()
         os.unlink(fdname + "_dex2jar.jar")
 
@@ -332,7 +385,8 @@ class DecompilerDex2Fernflower(object):
                     l = ["java", "-jar", path_fernflower + bin_fernflower]
 
                     for option in options_fernflower:
-                        l.append("-%s:%s" % (option, options_fernflower[option]))
+                        l.append("-%s:%s" %
+                                 (option, options_fernflower[option]))
                     l.append(real_filename)
                     l.append(root)
 
@@ -365,7 +419,7 @@ class DecompilerDex2Fernflower(object):
         return self.classes[class_name]
 
     def display_source(self, method):
-        print self.get_source_method(method)
+        print(self.get_source_method(method))
 
     def get_source_class(self, _class):
         return self.classes[_class.get_name()]
@@ -382,10 +436,11 @@ class DecompilerDex2Fernflower(object):
         return self.classes[class_name]
 
     def display_all(self, _class):
-        print self.get_all(_class.get_name())
+        print(self.get_all(_class.get_name()))
 
 
 class MethodFilter(Filter):
+
     def __init__(self, **options):
         Filter.__init__(self, **options)
 
@@ -393,7 +448,7 @@ class MethodFilter(Filter):
         #self.descriptor = options["descriptor"]
 
         self.present = False
-        self.get_desc = True #False
+        self.get_desc = True  #False
 
     def filter(self, lexer, stream):
         a = []
@@ -401,11 +456,12 @@ class MethodFilter(Filter):
         rep = []
 
         for ttype, value in stream:
-            if self.method_name == value and (ttype is Token.Name.Function or ttype is Token.Name):
+            if self.method_name == value and (ttype is Token.Name.Function or
+                                                  ttype is Token.Name):
                 #print ttype, value
 
                 item_decl = -1
-                for i in range(len(a)-1, 0, -1):
+                for i in range(len(a) - 1, 0, -1):
                     if a[i][0] is Token.Keyword.Declaration:
                         if a[i][1] != "class":
                             item_decl = i
@@ -413,43 +469,42 @@ class MethodFilter(Filter):
 
                 if item_decl != -1:
                     self.present = True
-                    l.extend( a[item_decl:] )
-
+                    l.extend(a[item_decl:])
 
             if self.present and ttype is Token.Keyword.Declaration:
                 item_end = -1
-                for i in range(len(l)-1, 0, -1):
+                for i in range(len(l) - 1, 0, -1):
                     if l[i][0] is Token.Operator and l[i][1] == "}":
                         item_end = i
                         break
 
                 if item_end != -1:
-                    rep.extend( l[:item_end+1] )
+                    rep.extend(l[:item_end + 1])
                     l = []
                     self.present = False
 
             if self.present:
-                l.append( (ttype, value) )
+                l.append((ttype, value))
 
-            a.append( (ttype, value) )
-
+            a.append((ttype, value))
 
         if self.present:
             nb = 0
             item_end = -1
-            for i in range(len(l)-1, 0, -1):
+            for i in range(len(l) - 1, 0, -1):
                 if l[i][0] is Token.Operator and l[i][1] == "}":
                     nb += 1
                     if nb == 2:
                         item_end = i
                         break
 
-            rep.extend( l[:item_end+1] )
+            rep.extend(l[:item_end + 1])
 
         return rep
 
 
 class DecompilerDAD(object):
+
     def __init__(self, vm, vmx):
         self.vm = vm
         self.vmx = vmx
@@ -458,9 +513,13 @@ class DecompilerDAD(object):
         mx = self.vmx.get_method(m)
         z = decompile.DvMethod(mx)
         z.process()
+        return z.get_source()
 
-        result = z.get_source()
-        return result
+    def get_ast_method(self, m):
+        mx = self.vmx.get_method(m)
+        z = decompile.DvMethod(mx)
+        z.process(doAST=True)
+        return z.get_ast()
 
     def display_source(self, m):
         result = self.get_source_method(m)
@@ -469,15 +528,17 @@ class DecompilerDAD(object):
             lexer = get_lexer_by_name("java", stripall=True)
             formatter = TerminalFormatter()
             result = highlight(result, lexer, formatter)
-        print result
+        print(result)
 
     def get_source_class(self, _class):
         c = decompile.DvClass(_class, self.vmx)
         c.process()
+        return c.get_source()
 
-        result = c.get_source()
-
-        return result
+    def get_ast_class(self, _class):
+        c = decompile.DvClass(_class, self.vmx)
+        c.process(doAST=True)
+        return c.get_ast()
 
     def get_source_class_ext(self, _class):
         c = decompile.DvClass(_class, self.vmx)
@@ -494,7 +555,7 @@ class DecompilerDAD(object):
             lexer = get_lexer_by_name("java", stripall=True)
             formatter = TerminalFormatter()
             result = highlight(result, lexer, formatter)
-        print result
+        print(result)
 
     def get_all(self, class_name):
         pass
